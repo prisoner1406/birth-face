@@ -58,11 +58,28 @@ const BlendFace = (() => {
   const SKIN_TONES = { fair: [240, 214, 192], light: [230, 196, 164], "light-olive": [214, 182, 140], medium: [198, 156, 116],
     olive: [182, 148, 100], tan: [172, 124, 84], brown: [140, 96, 64], "dark-brown": [106, 72, 50], deep: [80, 54, 40] };
   const CREAM = [246, 234, 204]; // the engraving's own skin
-  function tintSkin(o, W, H, skinAt, hair, rgb) {
-    const r = rgb.map((c, i) => c / CREAM[i]);
+  const gblur = (a, W, H, sg) => { const N = W * H, rad = Math.ceil(sg * 3), ker = []; let ks = 0; for (let k = -rad; k <= rad; k++) { const v = Math.exp(-0.5 * (k / sg) ** 2); ker.push(v); ks += v; }
+    const t1 = new Float32Array(N), t2 = new Float32Array(N);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { let v = 0; for (let k = -rad; k <= rad; k++) v += ker[k + rad] * a[y * W + Math.min(W - 1, Math.max(0, x + k))]; t1[y * W + x] = v / ks; }
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { let v = 0; for (let k = -rad; k <= rad; k++) v += ker[k + rad] * t1[Math.min(H - 1, Math.max(0, y + k)) * W + x]; t2[y * W + x] = v / ks; }
+    return t2; };
+  // coreAt(x, y): the face itself (tinted wherever it is not hair); edgeAt(x, y): the ears, the whole neck and the
+  // forehead up to the hairline, tinted where the drawing is as bright as skin (hair, even light hair, is darker once
+  // its strands are blurred together). The mask is softened, so the tone never stops at a hard line.
+  // earAt(x, y): the ears and the neck, whose ink lines and hatching make them darker, so they pass a gentler test.
+  function tintSkin(o, W, H, coreAt, edgeAt, earAt, hair, rgb) {
+    const N = W * H, r = rgb.map((c, i) => c / CREAM[i]), Y = new Float32Array(N), K = new Float32Array(N);
+    for (let p = 0, t = 0; p < N; p++, t += 4) Y[p] = o[t + 3] ? 0.299 * o[t] + 0.587 * o[t + 1] + 0.114 * o[t + 2] : 0;
+    const Yb = gblur(Y, W, H, 5 * W / 450), Ys = gblur(Y, W, H, 3 * W / 450);
     for (let y = 0, p = 0; y < H; y++) for (let x = 0; x < W; x++, p++) {
-      const t = p * 4; if (!o[t + 3]) continue;
-      const k = skinAt(x, y) * (1 - Math.min(1, hair ? hair[p] * 1.25 : 0)); if (k < 0.01) continue;
+      if (!o[p * 4 + 3]) continue;
+      const bright = Math.min(1, Math.max(0, (Yb[p] - 178) / 36)), soft = Math.min(1, Math.max(0, (Ys[p] - 115) / 40));
+      const notHair = 1 - Math.min(1, hair ? hair[p] * 1.25 : 0);
+      K[p] = Math.max(coreAt(x, y) * notHair, edgeAt(x, y) * bright * notHair, earAt(x, y) * soft);
+    }
+    const Ks = gblur(K, W, H, 2.5 * W / 450);
+    for (let p = 0, t = 0; p < N; p++, t += 4) {
+      const k = Math.min(1, Ks[p]); if (k < 0.01 || !o[t + 3]) continue;
       for (let c = 0; c < 3; c++) o[t + c] += k * (Math.min(255, o[t + c] * r[c]) - o[t + c]);
     }
   }
@@ -109,7 +126,7 @@ const BlendFace = (() => {
     }
   }
   const isShem = (n) => /^(shem|mansion|lilly)\d\d$/.test(n); // the Shem and mansion angels load one file each
-  // A weight's key is an element (Fire…), an archangel (michael…) or a Shem angel (shem01…).
+  // A weight's key is an element (Fireâ€¦), an archangel (michaelâ€¦) or a Shem angel (shem01â€¦).
   const layerOf = (k) => ANGEL[k] || k;
   const grid = () => (typeof BLEND_GRID !== "undefined" ? BLEND_GRID : { step: 10, gx: 46, gy: 61 });
 
@@ -156,7 +173,7 @@ const BlendFace = (() => {
     })));
   }
   // Soft masks for each part of the face, in the mean-shape frame (eyes at y 270, x 193 and 347; mouth at 270, 428,
-  // in a 540 × 720 frame scaled to the layers). Each pixel's share of a part is its mask over the sum of all masks.
+  // in a 540 Ã— 720 frame scaled to the layers). Each pixel's share of a part is its mask over the sum of all masks.
   let masks = null;
   function regionMasks(W, H) {
     if (masks && masks.W === W) return masks;
@@ -610,6 +627,9 @@ const BlendFace = (() => {
     const clip = CH && BlendFace.SILHOUETTE !== false; // a chart's face: only the head itself is kept
     const inMean = (x, y) => { const [fx, fy] = flowAt(x, y); return [(x - fx) * 540 / W, (y - fy) * 720 / H]; };
     const neckAt = (x, y, lo, w) => Math.min(1, Math.max(0, (y / H - lo) / 0.05)) * Math.min(1, Math.max(0, (w - Math.abs(x / W - 0.5)) / 0.04));
+    // the ears, beside the face at the height between the brows and the jaw (in the mean frame)
+    const earAt = (x, y) => { const [qx, qy] = inMean(x, y), side = Math.abs(qx - 270);
+      return Math.min(1, Math.max(0, (side - 135) / 15)) * Math.min(1, Math.max(0, (215 - side) / 15)) * Math.min(1, Math.max(0, (qy - 250) / 20)) * Math.min(1, Math.max(0, (420 - qy) / 20)); };
     let hair = null, fore = null;
     if (tone || hc || clip) {
       hair = hairMaskOf(o, W, H, (x, y) => {
@@ -663,12 +683,18 @@ const BlendFace = (() => {
       // the skin: the face with its ears, the forehead up to the hair, and the neck; never the hair
       if (tone) tintSkin(o, W, H, (x, y) => {
         const [qx, qy] = inMean(x, y), face = Math.exp(-0.5 * (((qx - 270) / 172) ** 2 + ((qy - 340) / 245) ** 2) ** 3);
-        return Math.max(Math.min(1, face * 1.3), neckAt(x, y, 0.55, 0.27), fore[y * W + x]);
-      }, hair, tone);
+        return Math.min(1, face * 1.3);
+      }, (x, y) => {
+        const [qx, qy] = inMean(x, y), wide = Math.exp(-0.5 * (((qx - 270) / 205) ** 2 + ((qy - 340) / 260) ** 2) ** 3);
+        return Math.max(Math.min(1, wide * 1.3), fore[y * W + x]);
+      }, (x, y) => Math.max(earAt(x, y), neckAt(x, y, 0.5, 0.34)), hair, tone);
       if (hc) tintHair(o, W, H, hair, hc);
       // The head alone: its face and ears, its forehead, its neck and its hair. Whatever else the portraits carry
       // around the head (their own halo rings, panels, glows) is made see-through, so only the one halo shows.
       if (clip) {
+        const inkE = new Float32Array(N);
+        for (let p = 0, t = 0; p < N; p++, t += 4) inkE[p] = o[t + 3] && 0.299 * o[t] + 0.587 * o[t + 1] + 0.114 * o[t + 2] < 150 ? 1 : 0;
+        const ear = gblur(inkE, W, H, 4 * W / 450).map((v) => Math.min(1, Math.max(0, (v - 0.04) / 0.08)));
         const hw = new Float32Array(N);
         for (let p = 0; p < N; p++) hw[p] = Math.min(1, hair[p] * 3);
         const rad = 8, ker = []; let ks = 0; for (let k = -rad; k <= rad; k++) { const v = Math.exp(-0.5 * (k / 3.5) ** 2); ker.push(v); ks += v; }
@@ -678,7 +704,7 @@ const BlendFace = (() => {
         for (let y = 0, p = 0; y < H; y++) for (let x = 0; x < W; x++, p++) {
           const t = p * 4; if (!o[t + 3]) continue;
           const [qx, qy] = inMean(x, y), face = Math.exp(-0.5 * (((qx - 270) / 152) ** 2 + ((qy - 335) / 232) ** 2) ** 3);
-          const keep = Math.max(Math.min(1, face * 1.3), neckAt(x, y, 0.55, 0.25), Math.min(1, hb[p] * 2.5), fore[p]);
+          const keep = Math.max(Math.min(1, face * 1.3), neckAt(x, y, 0.55, 0.25), Math.min(1, hb[p] * 2.5), fore[p], earAt(x, y) * ear[p]);
           o[t + 3] *= keep;
         }
       }
