@@ -114,6 +114,74 @@ The **Describe yourself** tab takes a description in words (never a photo), find
 
 ---
 
+## In depth: one face, taken completely apart
+
+Everything below is one made-up example person (born 1990-04-03, 09:00, London), taken apart at every step. All of it comes from the app's own renderer and data; nothing is drawn by hand.
+
+### The sky at the minute of birth
+
+The chart as a wheel: the signs, the 36 decans and their lords, the 72 angels of the Name, the 28 mansions of the Moon and the planets. Beside it, the four ancient readings of the rising degree and the portrait each one calls up.
+
+![The chart wheel and the rising degree](docs/deep-wheel.jpg)
+
+### Every order of angels
+
+The face drawn from each order of angels alone, with that order's share of the face. The real face draws them together.
+
+![Each order of angels on its own](docs/deep-orders.jpg)
+
+### Every part of the face
+
+Each part of the face is read from its own places in the chart, so each part has its own mix of angels. Here each mix draws a whole face on its own.
+
+![Each part's own mix of angels](docs/deep-parts.jpg)
+
+### Where each part is used
+
+The six parts of the face, and how they blend into each other.
+
+![The six part masks](docs/deep-masks.jpg)
+
+### Who sits where
+
+The 52 portraits in this face, mapped point by point: the portrait that gives the hair and outline, then the largest shares inside the face.
+
+![Heat maps of who sits where](docs/deep-heat.jpg)
+
+### The portraits it is made of
+
+The 24 portraits with the largest shares across the whole face.
+
+![The strongest portraits](docs/deep-portraits.jpg)
+
+### The face, stage by stage
+
+The renderer at every stage, from the plain average of every portrait to the finished face.
+
+![The renderer stage by stage](docs/deep-stages.jpg)
+
+### The shape
+
+The face's shape is blended separately from its drawing: every portrait carries a grid of how its face differs from the mean, and the chart's face takes the grids in its own shares.
+
+![The shape grids](docs/deep-shape.jpg)
+
+### What each part of the method does
+
+The same face with parts of the renderer switched off.
+
+![The method, part by part](docs/deep-method.jpg)
+
+### Every portrait
+
+All 204 angels, each drawn as a man and as a woman: the eight archangels and twelve zodiac angels, the 72 angels of the Name, the 28 lunar angels and Lilly's 84 faces.
+
+![Every masculine portrait](docs/atlas-masculine.jpg)
+
+![Every feminine portrait](docs/atlas-feminine.jpg)
+
+---
+
 ## Will it look like you?
 
 It may, in some ways, and it may not, in others. Birth Face is an image of a tradition: the faces the old astrologers said the sky gives, drawn from your own chart. It is not a photograph, and it does not claim to predict how anyone looks.

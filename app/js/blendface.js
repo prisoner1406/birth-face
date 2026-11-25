@@ -381,6 +381,7 @@ const BlendFace = (() => {
       if (Ad > 0) { const t = p * 3; Dt[t] = Rd / Ad; Dt[t + 1] = Gd / Ad; Dt[t + 2] = Bd / Ad; }
       if (NEU && An > 0) { Cn[i] = Rn / An; Cn[i + 1] = Gn / An; Cn[i + 2] = Bn / An; }
     }
+    if (BlendFace.DEBUG) { BlendFace.DEBUG.W = W; BlendFace.DEBUG.H = H; BlendFace.DEBUG.average = C.slice(); BlendFace.DEBUG.lines = (() => { const a = new Float32Array(N * 4); for (let p = 0; p < N; p++) { a[p * 4] = Dt[p * 3]; a[p * 4 + 1] = Dt[p * 3 + 1]; a[p * 4 + 2] = Dt[p * 3 + 2]; a[p * 4 + 3] = C[p * 4 + 3]; } return a; })(); if (Cn) BlendFace.DEBUG.neutral = Cn.slice(); } // the stages, for explaining the method (only when BlendFace.DEBUG is set)
     // 2. Shape: the displacement fields blended on the coarse grid (both charts at once). The outline of the head
     // takes its shape from the chart's own hair mix, not from the portrait that lends the hair, so choosing another
     // hair changes only the hair: it is drawn on the chart's head.
@@ -456,6 +457,7 @@ const BlendFace = (() => {
         for (let c = 0; c < 3; c++) { const dd = Dt[p * 3 + c] - lowD[i + c]; C[i + c] = Math.min(255, Math.max(0, lowC[i + c] + (dd < 0 ? dd : LIGHT * dd) + (broad ? (KT - 1) * broad[i + c] : 0))); }
       }
     }
+    if (BlendFace.DEBUG) BlendFace.DEBUG.detailed = C.slice();
     // 1b. The seams. Three things meet on a blended face, and each meeting is made seamless:
     //  - the edge of the face (temples, cheek outlines, jaw, neck) is the frame face's own drawing (one face, one
     //    contour), carried in the blend's broad tone, since the faint tone of many faces' contours would show as soft
@@ -532,6 +534,7 @@ const BlendFace = (() => {
         for (const i of top40) for (let c = 0; c < 3; c++) bgTone[c] += Ld[i + c] / top40.length;
       }
     }
+    if (BlendFace.DEBUG) { BlendFace.DEBUG.seamed = C.slice(); BlendFace.DEBUG.F = F.slice(); BlendFace.DEBUG.Fn = Fn.slice(); BlendFace.DEBUG.grid = { step, gx, gy }; }
     const flowAt = (x, y) => {
       const fx = x / step, fy = y / step, i0 = Math.min(gx - 2, Math.max(0, Math.floor(fx))), j0 = Math.min(gy - 2, Math.max(0, Math.floor(fy)));
       const ax = fx - i0, ay = fy - j0, a = (j0 * gx + i0) * 2, b = a + 2, c = a + gx * 2, d = c + 2;
@@ -587,6 +590,7 @@ const BlendFace = (() => {
       }
     }
     if (weights.eyeColor && EYE_COLORS[weights.eyeColor]) tintEyes(o, W, H, [[160, 229], [281, 228]].map(([x, y]) => { const [dx, dy] = flowAt(x, y); return [x * W / 450 + dx, y * H / 600 + dy]; }), EYE_COLORS[weights.eyeColor]);
+    if (BlendFace.DEBUG) BlendFace.DEBUG.warped = new Float32Array(o);
     const face = document.createElement("canvas"); face.width = W; face.height = H;
     face.getContext("2d").putImageData(out, 0, 0);
     ctx.drawImage(face, 0, 0);
@@ -625,5 +629,5 @@ const BlendFace = (() => {
       return c.toDataURL("image/jpeg", 0.85);
     }));
   }
-  return { render, who, thumb, ANGEL, EYE_COLORS, ownSex: (key, sex) => !(BORROWED[sex] || []).includes(layerOf(key)), INNER: { cx: 270, cy: 352, rx: 155, ry: 225, k: 2.2 }, CARICATURE: { KT: 2.5, KS: 2.5, SIGMA: 8 }, DETAIL: { p: 6, pOut: 14, sigma: 8, sexP: 3, light: 0.3, lilly: 0.12, lillyTex: 0.03 }, HAIR: { sigma: 5, lo: 45, hi: 90 }, reset: () => (masks = null) };
+  return { render, who, thumb, ANGEL, EYE_COLORS, ownSex: (key, sex) => !(BORROWED[sex] || []).includes(layerOf(key)), INNER: { cx: 270, cy: 352, rx: 155, ry: 225, k: 2.2 }, CARICATURE: { KT: 2.5, KS: 2.5, SIGMA: 8 }, DETAIL: { p: 6, pOut: 14, sigma: 8, sexP: 3, light: 0.3, lilly: 0.12, lillyTex: 0.03 }, HAIR: { sigma: 5, lo: 45, hi: 90 }, reset: () => (masks = null), DEBUG: null };
 })();
