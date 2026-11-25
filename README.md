@@ -70,9 +70,33 @@ Faces are blended as in composite-face research: every portrait is set on one sh
 
 ---
 
-## What it is, and what it is not
+## Will it look like you?
 
-Birth Face is an image of a tradition: the faces the old astrologers said the sky gives, drawn from your own chart. It is not a photograph and does not claim to predict how anyone looks. Real faces also carry family, ancestry and life. The **Describe yourself** and **Observations & discovery** tabs are there to test the tradition honestly, one described face at a time.
+It may, in some ways, and it may not, in others. Birth Face is an image of a tradition: the faces the old astrologers said the sky gives, drawn from your own chart. It is not a photograph, and it does not claim to predict how anyone looks.
+
+### Where people tend to see themselves
+
+The tradition reads each feature from its own place in the chart, so a resemblance, when there is one, usually shows feature by feature rather than in the whole face:
+
+- **The eyes and their lids:** the Moon and its sign give the eyes' set and expression; a chart strong in water draws heavy, sleepy lids, one strong in earth deep-set eyes.
+- **The mouth:** the Moon and Venus give the lips; water draws them full, with a clear bow, earth with a fuller lower lip, fire wider and sharper.
+- **The length and breadth of the face:** the rising sign, its lord and the Moon give the frame; earth draws a long face, water a rounder one, fire a strong-boned one.
+- **The brows and nose:** Mars and the Sun give the brow, Venus the nose.
+
+The **Face** tab shows exactly which angels and which places in the chart made each part, so you can see why a feature came out as it did.
+
+### Why it may not look like you
+
+- **Family and ancestry shape a face far more than anything else.** Two people born at the same minute in the same town have the same chart, and different parents.
+- **Colouring is left out on purpose.** Skin, hair and eye colour come from family, not the sky, so the face is drawn in the portraits' own colours. You can choose the eye colour and the hair yourself.
+- **The birth time has to be exact.** The rising degree moves about one degree every four minutes; a time off by a quarter of an hour can change the frame of the face, and near the edge of a sign the rising sign itself.
+- **Age, weight and life change a face.** The chart gives one face for a whole life; yours changes with the years.
+- **The portraits set the style.** Every face is drawn from hand-drawn angel portraits, so it always looks like an illustration of an ideal, youthful person, not a photograph of anyone.
+- **The tradition itself is unproven.** No study has shown that a birth chart predicts appearance. A likeness may be chance, or the way we look for ourselves in any face.
+
+### Testing it honestly
+
+The **Describe yourself** tab lets you describe a real face in words (never a photo) and shows how well the chart explains that description, compared with hundreds of other birth moments at the same place. That comparison is what tells a real fit from coincidence. The **Observations & discovery** tab collects described faces across many people and shows which parts of the chart keep matching. The more people with exact birth times are described, the clearer it becomes where the tradition holds and where it does not.
 
 Angels in Birth Face are witnessed, not invoked: the app draws on how the traditions picture them and makes no prayers or rituals.
 
