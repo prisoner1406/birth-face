@@ -901,8 +901,8 @@ const Faces = (() => {
     const f = (signs.reduce((a, x) => a + x.w * x.f, 0) + planets.reduce((a, x) => a + x.w * x.f, 0)) / tot;
     return { feminine: f, masculine: 1 - f, signs, planets };
   }
-  // How much of each set of faces the features take: a person's own sex leads, and the chart's other side adds up to
-  // half (a man whose chart is wholly feminine takes his features half from the feminine faces). With no sex given,
+  // How much of each set of faces the features take: a person's own sex leads, and the chart's other side adds a
+  // little, at most OTHER_SEX (below). With no sex given,
   // the chart's balance alone. The hair and outline stay with the person's own sex (or the larger side).
   // How much the other side of a chart's masculine/feminine balance lends a person's features: at most OTHER_SEX.
   // The ancient chapters on appearance (Ptolemy III.11, Lilly) read the form from the rising sign, its ruler, the

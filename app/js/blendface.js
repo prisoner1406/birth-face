@@ -46,10 +46,16 @@ const BlendFace = (() => {
     return blur(m, 2.5);
   }
   function tintHair(o, W, H, mb, rgb) {
-    const N = W * H, sh = rgb.map((c) => c * 0.3), hi = rgb.map((c) => c + (255 - c) * 0.3);
+    // The highlight between strands is only as light as the colour allows: black hair shines dark grey, not pale;
+    // blonde and white hair keep their light. The strands themselves take the colour's deep shadow.
+    const N = W * H, Yh = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255, lift = 0.08 + 0.32 * Yh;
+    const sh = rgb.map((c) => c * 0.28), hi = rgb.map((c) => c + (255 - c) * lift);
+    // the mask reaches out to the hair's very edge (the strands' own light rim and the glow drawn around them), so no
+    // pale outline is left between the coloured hair and the background
+    const edge = gblur(Float32Array.from(mb, (v) => Math.min(1, v * 3)), W, H, 3 * W / 450);
     for (let p = 0, t = 0; p < N; p++, t += 4) {
-      const k = 0.95 * Math.min(1, mb[p] * 1.6); if (k < 0.01 || !o[t + 3]) continue;
-      const Y = 0.299 * o[t] + 0.587 * o[t + 1] + 0.114 * o[t + 2], s = Math.min(1, Math.max(0, (Y - 35) / 200));
+      const k = 0.97 * Math.min(1, Math.max(mb[p] * 1.8, edge[p] * 1.6)); if (k < 0.01 || !o[t + 3]) continue;
+      const Y = 0.299 * o[t] + 0.587 * o[t + 1] + 0.114 * o[t + 2], s = Math.min(1, Math.max(0, (Y - 35) / 200)) ** 1.15;
       for (let c = 0; c < 3; c++) o[t + c] += k * (sh[c] + s * (hi[c] - sh[c]) - o[t + c]);
     }
   }
@@ -67,7 +73,7 @@ const BlendFace = (() => {
   // forehead up to the hairline, tinted where the drawing is as bright as skin (hair, even light hair, is darker once
   // its strands are blurred together). The mask is softened, so the tone never stops at a hard line.
   // earAt(x, y): the ears and the neck, whose ink lines and hatching make them darker, so they pass a gentler test.
-  function tintSkin(o, W, H, coreAt, edgeAt, earAt, hair, rgb) {
+  function tintSkin(o, W, H, coreAt, edgeAt, earAt, hair, rgb, eyes) {
     const N = W * H, r = rgb.map((c, i) => c / CREAM[i]), Y = new Float32Array(N), K = new Float32Array(N);
     for (let p = 0, t = 0; p < N; p++, t += 4) Y[p] = o[t + 3] ? 0.299 * o[t] + 0.587 * o[t + 1] + 0.114 * o[t + 2] : 0;
     const Yb = gblur(Y, W, H, 5 * W / 450), Ys = gblur(Y, W, H, 3 * W / 450);
@@ -78,9 +84,24 @@ const BlendFace = (() => {
       K[p] = Math.max(coreAt(x, y) * notHair, edgeAt(x, y) * bright * notHair, earAt(x, y) * soft);
     }
     const Ks = gblur(K, W, H, 2.5 * W / 450);
-    for (let p = 0, t = 0; p < N; p++, t += 4) {
-      const k = Math.min(1, Ks[p]); if (k < 0.01 || !o[t + 3]) continue;
-      for (let c = 0; c < 3; c++) o[t + c] += k * (Math.min(255, o[t + c] * r[c]) - o[t + c]);
+    // The drawing is mapped onto the tone by its light and shade, not simply darkened: the bare skin takes the tone
+    // (a little lighter where the light falls on darker skin), the ink lines its deep shadow, and the hatching between
+    // them is spread so it still reads. Without this the drawing sinks into darker tones: hatching, creases and the
+    // lines of the lids, nose and lips all but vanish. The darker the tone, the more the hatching is spread.
+    const Yt = 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2], dark = Math.min(1, Math.max(0, 1 - Yt / 225));
+    // (the lit skin is the tone made brighter in its own hue, never paler toward white, which would turn it ashen)
+    const lightC = rgb.map((c) => Math.min(255, c * (1.04 + 0.4 * dark))), shadC = rgb.map((c) => c * 0.14), gam = 1 + 0.75 * dark;
+    const Yc = 0.299 * CREAM[0] + 0.587 * CREAM[1] + 0.114 * CREAM[2];
+    // the whites of the eyes are not skin: they stay light at every tone
+    const ex = 24 * W / 450, ey = 9 * W / 450;
+    for (let y = 0, p = 0, t = 0; y < H; y++) for (let x = 0; x < W; x++, p++, t += 4) {
+      let k = Math.min(1, Ks[p]); if (k < 0.01 || !o[t + 3]) continue;
+      if (eyes) for (const [cx, cy] of eyes) {
+        const q = ((x - cx) / ex) ** 2 + ((y - cy) / ey) ** 2; if (q > 2.5) continue;
+        k *= 1 - 0.9 * Math.exp(-q * q) * Math.min(1, Math.max(0, (Y[p] - 165) / 35));
+      }
+      const s = Math.min(1.06, Math.max(0, (Y[p] - 28) / (Yc - 28))), f = Math.pow(s, gam);
+      for (let c = 0; c < 3; c++) o[t + c] += k * (Math.min(255, shadC[c] + f * (lightC[c] - shadC[c])) - o[t + c]);
     }
   }
   const lum = (d, i) => 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
@@ -687,7 +708,8 @@ const BlendFace = (() => {
       }, (x, y) => {
         const [qx, qy] = inMean(x, y), wide = Math.exp(-0.5 * (((qx - 270) / 205) ** 2 + ((qy - 340) / 260) ** 2) ** 3);
         return Math.max(Math.min(1, wide * 1.3), fore[y * W + x]);
-      }, (x, y) => Math.max(earAt(x, y), neckAt(x, y, 0.5, 0.34)), hair, tone);
+      }, (x, y) => Math.max(earAt(x, y), neckAt(x, y, 0.5, 0.34)), hair, tone,
+        [[160, 229], [281, 228]].map(([x, y]) => { const [dx, dy] = flowAt(x, y); return [x * W / 450 + dx, y * H / 600 + dy]; }));
       if (hc) tintHair(o, W, H, hair, hc);
       // The head alone: its face and ears, its forehead, its neck and its hair. Whatever else the portraits carry
       // around the head (their own halo rings, panels, glows) is made see-through, so only the one halo shows.
