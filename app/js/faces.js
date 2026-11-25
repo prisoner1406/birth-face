@@ -681,24 +681,12 @@ const Faces = (() => {
         for (const [a, v] of Object.entries(saN)) angels[a] = (angels[a] || 0) + RULES[x.key].signs * v;
         if (shN && x.key === "face") { for (const a of Object.keys(angels)) angels[a] *= 0.7; for (const [a, v] of Object.entries(shN)) angels[a] = 0.3 * v; }
         const lnHave = typeof MANSION_HAVE !== "undefined" ? MANSION_HAVE : [], lnN = choir && lnHave.length ? uni(lnHave.map((n) => "mansion" + String(n).padStart(2, "0"))) : null;
-        const adam = {}, orders = [eaN, planets, saN, shN, lnN].filter(Boolean);
+        const adam = {}, orders = [archOrder(eaN, planets), saN, shN, lnN].filter(Boolean);
         for (const o of orders) for (const [k, v] of Object.entries(o)) adam[k] = (adam[k] || 0) + v / orders.length;
         x.neutral = { angels, planets, adam, shem: shN };
       }
     }
-    // The angel of the Moon's mansion (the twenty-eight angels Agrippa names, as
-    // printed in Barrett's Magus): the Moon rules the eyes and the expression and, with Venus, the mouth, so the
-    // angel of the mansion it stood in at birth takes a quarter of the eyes and of the mouth. Only with a birth
-    // time: the Moon crosses a whole mansion in about a day.
-    const mansion = mansionOf(natal), MANSION_SHARE = { eyes: 0.25, mouth: 0.25 };
-    const mHave = typeof MANSION_HAVE !== "undefined" ? MANSION_HAVE : [];
-    for (const x of out) {
-      const k = MANSION_SHARE[x.key];
-      if (!k) continue;
-      if (mansion && mansion.drawn) { for (const a of Object.keys(x.angels)) x.angels[a] *= 1 - k; x.angels[mansion.key] = (x.angels[mansion.key] || 0) + k; x.mansion = mansion; }
-      // The average chart: the Moon equally in every mansion.
-      if (mansion && mansion.drawn && mHave.length) { const na = x.neutral.angels; for (const a of Object.keys(na)) na[a] *= 1 - k; for (const n of mHave) na["mansion" + String(n).padStart(2, "0")] = k / mHave.length; }
-    }
+    const mansion = mansionOf(natal), mHave = typeof MANSION_HAVE !== "undefined" ? MANSION_HAVE : [];
     // The element portraits: the archangels' eyes and mouths are all drawn in one ideal style, but the twenty-eight
     // mansion angels were each drawn with their element's eyes and mouth (water full lips and sleepy lids, earth
     // deep-set eyes and a fuller lower lip, fire a wide, sharp mouth and almond eyes, air open eyes and a soft bow).
@@ -750,9 +738,23 @@ const Faces = (() => {
         for (const l of lilly) if (l.share) o[l.key] = (o[l.key] || 0) + K * l.share;
       }
     }
-    // The face of Adam: every angel at once. Each feature takes a fifth from each of the five orders: the
-    // archangels of its elements, the planetary archangels, the twelve angels of the zodiac, the seventy-two angels
-    // of the Name and the twenty-eight angels of the Moon's mansions. Every angel of every order is in it: each
+    // The angel of the Moon's mansion (the twenty-eight angels Agrippa names, as printed in Barrett's Magus): the
+    // Moon rules the eyes and the expression and, with Venus, the mouth, so the angel of the mansion it stood in at
+    // birth takes the Moon's own part of the eyes and of the mouth (as FEATURES reads them: 35% and 30%). It comes
+    // last, after the element portraits and Lilly's faces, so that part is what the drawing really gets. Only with a
+    // birth time: the Moon crosses a whole mansion in about a day.
+    const MANSION_SHARE = Object.fromEntries(FEATURES.filter((f) => f.src.moon && (f.key === "eyes" || f.key === "mouth")).map((f) => [f.key, f.src.moon]));
+    for (const x of out) {
+      const k = MANSION_SHARE[x.key];
+      if (!k) continue;
+      if (mansion && mansion.drawn) { for (const a of Object.keys(x.angels)) x.angels[a] *= 1 - k; x.angels[mansion.key] = (x.angels[mansion.key] || 0) + k; x.mansion = mansion; }
+      // The average chart: the Moon equally in every mansion.
+      if (mansion && mansion.drawn && mHave.length) { const na = x.neutral.angels; for (const a of Object.keys(na)) na[a] *= 1 - k; for (const n of mHave) { const key = "mansion" + String(n).padStart(2, "0"); na[key] = (na[key] || 0) + k / mHave.length; } }
+    }
+    // The face of Adam: every angel at once. Each feature takes a quarter from each of the four orders: the
+    // archangels (half by its elements, half by the planets: the same eight portraits, so one order, not two, or
+    // they would take two fifths and draw the whole face, alike to the planetary face), the twelve angels of the
+    // zodiac, the seventy-two angels of the Name and the twenty-eight angels of the Moon's mansions. Every angel of every order is in it: each
     // keeps an equal share (EQUAL), and the rest follows the chart, read from the places the tradition gives
     // each feature, as for the angels of the Name.
     for (const x of out) {
@@ -760,7 +762,7 @@ const Faces = (() => {
       for (const [k, w] of Object.entries(SIGN_SRC[x.key])) if (PT[k]) focus[PT[k]] = (focus[PT[k]] || 0) + w;
       x.zodiacW = choir ? zodiacBlend(natal, x.signW) : null;
       x.lunarW = choir ? mansionBlend(natal, focus) : null;
-      const orders = [x.elemAngels, x.planets, x.zodiacW || x.signW, x.shemW, x.lunarW].filter(Boolean);
+      const orders = [archOrder(x.elemAngels, x.planets), x.zodiacW || x.signW, x.shemW, x.lunarW].filter(Boolean);
       x.adam = {};
       for (const o of orders) for (const [k, v] of Object.entries(o)) x.adam[k] = (x.adam[k] || 0) + v / orders.length;
     }
@@ -902,10 +904,15 @@ const Faces = (() => {
   // How much of each set of faces the features take: a person's own sex leads, and the chart's other side adds up to
   // half (a man whose chart is wholly feminine takes his features half from the feminine faces). With no sex given,
   // the chart's balance alone. The hair and outline stay with the person's own sex (or the larger side).
+  // How much the other side of a chart's masculine/feminine balance lends a person's features: at most OTHER_SEX.
+  // The ancient chapters on appearance (Ptolemy III.11, Lilly) read the form from the rising sign, its ruler, the
+  // planets rising and the Moon, never from the signs' gender, which speaks of temperament and character; so it
+  // only lightly colours the features (a man with an all-feminine chart takes 15% from the women's portraits).
+  const OTHER_SEX = 0.15;
   function sexMix(natal, sex) {
     const g = genderBalance(natal);
-    if (sex === "m") return { m: 1 - 0.5 * g.feminine, f: 0.5 * g.feminine, outline: "m", balance: g };
-    if (sex === "f") return { f: 1 - 0.5 * g.masculine, m: 0.5 * g.masculine, outline: "f", balance: g };
+    if (sex === "m") return { m: 1 - OTHER_SEX * g.feminine, f: OTHER_SEX * g.feminine, outline: "m", balance: g };
+    if (sex === "f") return { f: 1 - OTHER_SEX * g.masculine, m: OTHER_SEX * g.masculine, outline: "f", balance: g };
     return { m: g.masculine, f: g.feminine, outline: g.feminine > 0.5 ? "f" : "m", balance: g };
   }
   // The twenty-eight angels of the Moon's mansions, as Barrett prints them (The Magus, 1801, II p. 57) after Agrippa;
@@ -948,6 +955,29 @@ const Faces = (() => {
     const sums = Object.fromEntries(Object.keys(MIX).map((k) => [k, have.reduce((a, n) => a + parts[k][n], 0) || 1])), out = {};
     for (const n of have) out["mansion" + String(n).padStart(2, "0")] = (1 - EQUAL) * Object.keys(MIX).reduce((a, k) => a + MIX[k] * parts[k][n] / sums[k], 0) + EQUAL / have.length;
     return out;
+  }
+  // The eyes are drawn by the Moon's own angel. The Moon rules the eyes' look and expression, and the angel of the
+  // mansion it stood in at birth is the one portrait of the Moon's exact place, so in the finished face it draws most
+  // of the eyes (MOON_EYES); the Sun and the other portraits of the eyes keep the rest. Like Lilly's faces, it is
+  // drawn as it is, not strengthened: the average chart takes the same angel for the same part (otherwise the
+  // difference in its shading would be exaggerated into a pale or dark band across the eyes). Applied to a finished
+  // face's regions (and its average chart's).
+  const MOON_EYES = 0.7;
+  function moonEyes(regions, neutral, fe) {
+    const m = fe && fe.mansion; if (!m || !m.drawn || !regions || !regions.eyes) return;
+    const put = (o, add) => {
+      const t = Object.values(o).reduce((a, b) => a + b, 0) || 1;
+      for (const k of Object.keys(o)) o[k] *= 1 - MOON_EYES;
+      for (const [k, v] of Object.entries(add)) o[k] = (o[k] || 0) + MOON_EYES * t * v;
+    };
+    put(regions.eyes, { [m.key]: 1 });
+    if (neutral && neutral.eyes) put(neutral.eyes, { [m.key]: 1 });
+  }
+  // The archangels as one order of Every angel at once: their elemental and planetary readings, half each.
+  function archOrder(el, pl) {
+    const os = [el, pl].filter(Boolean), o = {};
+    for (const m of os) for (const [k, v] of Object.entries(m)) o[k] = (o[k] || 0) + v / os.length;
+    return os.length ? o : null;
   }
   function mansionOf(natal) {
     if (!natal.timeKnown) return null;
@@ -1160,5 +1190,5 @@ const Faces = (() => {
     eyes: { moon: 0.7, sun: 0.3 }, nose: { venus: 0.6, sun: 0.4 }, mouth: { moon: 0.6, venus: 0.4 } };
   const ELEM_GROUP = { Fire: ["michael", "khamael"], Air: ["raphael", "sachiel"], Water: ["gabriel", "anael"], Earth: ["uriel", "cassiel"] };
 
-  return { ARCH, PLANET, RULER, SIGNS, read, temperament, ptolemy, TEMPER, melothesia, metoposcopy, MIAN, planetary, PLANET_ANGEL, ANGEL_NAME, features, ELEM_ANGEL, ELEM_GROUP, SIGN_ANGEL, SHEM, SHEM_HE, CHOIRS, shemOf, shemBlend, genderBalance, sexMix, nameLetters, MANSION_ANGELS, mansionOf, deeper, navamsaOf, starsOn, STARS_J2000, AGES, nowChart, faceNow, FEATURE_LOOK, angelElement, featureElements, rectify, setCalibration, rules, calibrate, TRADITION, LILLY_TEXT, LILLY_ORDER, lillyKey, lillyFaces, hairLeader, setElementPortraits: (v) => (ELEMENT_PORTRAITS = v) };
+  return { ARCH, PLANET, RULER, SIGNS, read, temperament, ptolemy, TEMPER, melothesia, metoposcopy, MIAN, planetary, PLANET_ANGEL, ANGEL_NAME, features, ELEM_ANGEL, ELEM_GROUP, SIGN_ANGEL, SHEM, SHEM_HE, CHOIRS, shemOf, shemBlend, genderBalance, sexMix, nameLetters, MANSION_ANGELS, mansionOf, deeper, navamsaOf, starsOn, STARS_J2000, AGES, nowChart, faceNow, FEATURE_LOOK, angelElement, featureElements, rectify, setCalibration, rules, calibrate, TRADITION, LILLY_TEXT, LILLY_ORDER, lillyKey, lillyFaces, hairLeader, moonEyes, MOON_EYES, OTHER_SEX, setElementPortraits: (v) => (ELEMENT_PORTRAITS = v) };
 })();

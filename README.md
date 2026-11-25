@@ -2,11 +2,11 @@
 
 **A face drawn from the sky at the minute you were born.**
 
-Birth Face is a Windows desktop app. Enter a birth date, an exact time and a place, and it draws a face from the birth chart alone. No photograph is ever used. The face is a blend of over two hundred hand-drawn angel portraits, each weighed by the oldest ways the tradition reads appearance from the heavens: the rising degree, the elements, the planets, and the angels of the Name and of the Moon.
+Birth Face is a Windows desktop app. Enter a birth date, an exact time and a place, and it draws a face from the birth chart alone. No photograph is ever used. The face is a blend of over two hundred angel portraits in the style of a gold engraving, each weighed by the oldest ways the tradition reads appearance from the heavens: the rising degree, the elements, the planets, and the angels of the Name and of the Moon.
 
 ![Three charts, three faces](docs/three-charts.jpg)
 
-*Three birth charts, three faces. Each is drawn only from its chart: one leaning to water and earth, one to fire, one to air and fire.*
+*Three made-up birth charts, three faces. Each is drawn only from its chart: one leaning to water and earth, one to fire and air, one to earth and air.*
 
 ---
 
@@ -20,12 +20,16 @@ Every part of the face (the face shape, brow, eyes, nose, mouth, hair and outlin
 | **The planets** | The seven planetary archangels, by each planet's strength in the chart | Ptolemy, *Tetrabiblos* III.11–12 |
 | **The zodiac angels** | The angels of the signs each feature is read from (the rising sign for the frame, the Moon for the eyes and mouth, Venus for the nose) | Agrippa; the Golden Dawn |
 | **The 72 angels of the Name** | The Shem ha-Mephorash, each holding five degrees of the zodiac, weighed by where the planets stand | Exodus 14:19–21 |
-| **The 28 lunar angels** | The angel of the Moon's mansion at birth, in the eyes and the expression | Barrett, *The Magus* (1801), after Agrippa |
+| **The 28 lunar angels** | The angel of the Moon's mansion at birth, who draws most of the eyes and part of the mouth | Barrett, *The Magus* (1801), after Agrippa |
 | **Lilly's 84 faces** | The face shape Lilly gives each planet in each sign, for the lord of the Ascendant, any planet rising, and the Moon | Lilly, *Christian Astrology* |
 
 ![The layers of one face](docs/layers.jpg)
 
-*One chart, layer by layer: the combined face, then the faces of its elements, its planets, its angels of the Name, its lunar angel, and every angel at once.*
+*One chart, order by order: the finished face, then the face each order of angels would give on its own (the archangels, the zodiac angels, the angels of the Name, the lunar angels and Lilly's faces). The finished face draws them together.*
+
+### The eyes
+
+The Moon gives the eyes, so the angel of the Moon's mansion at birth draws most of them (70%); the rest of the chart shapes the other 30%. The Moon's mansion changes about every day, so two people born a day apart can have quite different eyes.
 
 ### The rising degree
 
@@ -38,11 +42,13 @@ Birth Face reads the exact degree rising on the eastern horizon in four of the o
 
 ### Masculine and feminine
 
-Every angel is drawn twice, as a man and as a woman. A face blends the two by the chart's own balance (Ptolemy, *Tetrabiblos* I.6 and I.12), while the hair and outline always come from the person's own sex.
+Every angel is drawn twice, as a man and as a woman. The person's own sex leads; the other lends at most 15% of the features, in proportion to how masculine or feminine the chart is (Ptolemy, *Tetrabiblos* I.6 and I.12). The hair and outline always come from the person's own sex.
 
 ![The eight archangels](docs/archangels.jpg)
 
 *Eight of the portraits: the archangels of the four elements and the seven planets.*
+
+The archangels, zodiac angels and lunar angels are drawn in one gold-engraving style: sepia ink, cream skin, a gold ground. The angels of the Name and Lilly's faces keep an earlier inked style. In a blend they give mostly shape, so the finished face keeps the gold style.
 
 ---
 
@@ -53,7 +59,7 @@ flowchart LR
     A["Birth date, exact time, place"] --> B["The chart<br/>planets, signs, rising degree,<br/>Moon's mansion"]
     B --> C["Each part of the face<br/>read from its own places<br/>(rising sign → frame, Moon → eyes, Venus → nose…)"]
     C --> D["A share for every portrait<br/>in every part of the face"]
-    E["408 hand-drawn portraits<br/>set on one shared frame"] --> F["Blend the shapes<br/>(grids)"]
+    E["408 portraits<br/>set on one shared frame"] --> F["Blend the shapes<br/>(grids)"]
     E --> G["Blend the drawings<br/>(in the shared shape)"]
     D --> F
     D --> G
@@ -66,7 +72,7 @@ The method is the one composite-face research uses (Galton's composite portraits
 
 ### 1. One shared frame
 
-Every portrait was drawn by hand, so each sits a little differently in its picture. Before any blending, the build finds both irises in every portrait, by matching the eyes of the mean face at many sizes, and sets each portrait on one shared frame by them. Then every face's eyes, nose and mouth sit on the same pixels.
+Every portrait was made on its own, so each sits a little differently in its picture. Before any blending, the build finds both irises in every portrait, by matching the eyes of the mean face at many sizes, and sets each portrait on one shared frame by them. Then every face's eyes, nose and mouth sit on the same pixels.
 
 ![Finding the irises and setting every portrait on one frame](docs/how-alignment.jpg)
 
@@ -110,7 +116,7 @@ The **Describe yourself** tab takes a description in words (never a photo), find
 
 *The same chart's face with the hair of Gabriel, Michael, Uriel, Cassiel and Raphael.*
 
-- **The eye colour:** the chart and the tradition leave colouring out (skin, hair and eye colour come from family, not the sky), so eye colour is your own choice.
+- **Skin tone, hair colour and eye colour:** the chart and the tradition leave colouring out (skin, hair and eyes take their colour from family, not the sky), so all three are your own choice. The face is drawn in the engraving's own colours until you pick them. Skin tone has nine shades, hair colour eleven and eye colour eight; the ink lines stay as drawn.
 
 ---
 
@@ -200,10 +206,10 @@ The **Face** tab shows exactly which angels and which places in the chart made e
 ### Why it may not look like you
 
 - **Family and ancestry shape a face far more than anything else.** Two people born at the same minute in the same town have the same chart, and different parents.
-- **Colouring is left out on purpose.** Skin, hair and eye colour come from family, not the sky, so the face is drawn in the portraits' own colours. You can choose the eye colour and the hair yourself.
+- **Colouring is left out on purpose.** Skin, hair and eye colour come from family, not the sky, so the face is drawn in the engraving's own colours. You can choose the skin tone, hair colour, eye colour and hair yourself.
 - **The birth time has to be exact.** The rising degree moves about one degree every four minutes; a time off by a quarter of an hour can change the frame of the face, and near the edge of a sign the rising sign itself.
 - **Age, weight and life change a face.** The chart gives one face for a whole life; yours changes with the years.
-- **The portraits set the style.** Every face is drawn from hand-drawn angel portraits, so it always looks like an illustration of an ideal, youthful person, not a photograph of anyone.
+- **The portraits set the style.** Every face is drawn from illustrated angel portraits, so it always looks like an illustration of an ideal, youthful person, not a photograph of anyone.
 - **The tradition itself is unproven.** No study has shown that a birth chart predicts appearance. A likeness may be chance, or the way we look for ourselves in any face.
 
 ### Testing it honestly
@@ -223,4 +229,4 @@ npm test           # the rising-degree checks
 npm run dist       # build the Windows installer (dist/installer)
 ```
 
-The portraits are original illustrations made for the app.
+The portraits are original illustrations made for the app with Google's Nano Banana image models.

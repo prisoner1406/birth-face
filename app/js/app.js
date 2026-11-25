@@ -44,9 +44,10 @@
       regions[x.key] = mix(mix(x.angels, x.planets, 0.6, 0.4), C, 1 - K, K);
       neutral[x.key] = mix(mix(x.neutral.angels, x.neutral.planets, 0.6, 0.4), C, 1 - K, K);
     }
+    Faces.moonEyes(regions, neutral, fe); // the Moon's own angel draws the eyes
     const f = Rising.femininity(natal, L), own = p.sex === "f" ? "f" : "m";
-    const sexMix = own === "m" ? { m: 1 - 0.5 * f, f: 0.5 * f, outline: "m" } : { f: 1 - 0.5 * (1 - f), m: 0.5 * (1 - f), outline: "f" };
-    return { natal, fe, L, C, lead, chartLead, regions, neutral, sexMix, femininity: f, spec: { regions, lead, neutral: { regions: neutral }, sexMix, ...(p.hairLead && p.hairKeepColor !== false ? { hairColor: chartLead } : {}), ...(p.eyeColor && BlendFace.EYE_COLORS && BlendFace.EYE_COLORS[p.eyeColor] ? { eyeColor: p.eyeColor } : {}) } };
+    const K = Faces.OTHER_SEX, sexMix = own === "m" ? { m: 1 - K * f, f: K * f, outline: "m" } : { f: 1 - K * (1 - f), m: K * (1 - f), outline: "f" };
+    return { natal, fe, L, C, lead, chartLead, regions, neutral, sexMix, femininity: f, spec: { regions, lead, neutral: { regions: neutral }, sexMix, ...(p.hairLead && p.hairKeepColor !== false ? { hairColor: chartLead } : {}), ...(p.eyeColor && BlendFace.EYE_COLORS && BlendFace.EYE_COLORS[p.eyeColor] ? { eyeColor: p.eyeColor } : {}), ...(p.hairTint && BlendFace.HAIR_COLORS && BlendFace.HAIR_COLORS[p.hairTint] ? { hairTint: p.hairTint } : {}), ...(p.skinTone && BlendFace.SKIN_TONES && BlendFace.SKIN_TONES[p.skinTone] ? { skinTone: p.skinTone } : {}) } };
   }
 
   // ---------- people list ----------
@@ -83,6 +84,8 @@
         <figure class="face" id="face"><canvas></canvas><span class="wait">Drawing the face…</span><span class="dot" hidden></span><figcaption>${esc(p.name)}, from the sky at birth</figcaption></figure>
         <div><h2>Who sits inside this face</h2><div id="who"><p class="fine">Point at the face (the forehead, an eye, the nose, the lips, the jaw) to see who sits there and in what share.</p></div>
           <p class="hair-pick"><label>Hair from <select id="hair"><option value="">The chart's choice: ${esc(name(F.chartLead))}</option>${[["Archangels", ["michael", "gabriel", "raphael", "uriel", "anael", "khamael", "sachiel", "cassiel"]], ["Zodiac angels", Object.values(Faces.SIGN_ANGEL)], ["Shem angels", Array.from({ length: 72 }, (_, i) => "shem" + String(i + 1).padStart(2, "0"))], ["Lunar angels", Array.from({ length: 28 }, (_, i) => "mansion" + String(i + 1).padStart(2, "0"))], ["Lilly's faces", Array.from({ length: 84 }, (_, i) => "lilly" + String(i + 1).padStart(2, "0"))]].map(([g, ks]) => `<optgroup label="${g}">${ks.map((k) => `<option value="${k}"${k === p.hairLead ? " selected" : ""}>${esc(name(k))}</option>`).join("")}</optgroup>`).join("")}</select></label>${p.hairLead ? `<label class="keep"><input type="checkbox" id="hair-color"${p.hairKeepColor !== false ? " checked" : ""}> Keep the chart's hair colour</label>` : ""}<small>Only the hair changes; the head and the face stay the chart's.</small></p>
+          <p class="hair-pick"><label>Skin tone <select id="skin"><option value="">As the engraving draws it</option>${[["fair", "Fair"], ["light", "Light"], ["light-olive", "Light olive"], ["medium", "Medium"], ["olive", "Olive"], ["tan", "Tan"], ["brown", "Brown"], ["dark-brown", "Dark brown"], ["deep", "Deep"]].map(([k, l]) => `<option value="${k}"${k === p.skinTone ? " selected" : ""}>${l}</option>`).join("")}</select></label><small>Your own choice: the lines stay as drawn.</small></p>
+          <p class="hair-pick"><label>Hair colour <select id="hairtint"><option value="">As the engraving draws it</option>${[["black", "Black"], ["dark-brown", "Dark brown"], ["brown", "Brown"], ["light-brown", "Light brown"], ["auburn", "Auburn"], ["red", "Red"], ["dark-blonde", "Dark blonde"], ["blonde", "Blonde"], ["platinum", "Platinum"], ["grey", "Grey"], ["white", "White"]].map(([k, l]) => `<option value="${k}"${k === p.hairTint ? " selected" : ""}>${l}</option>`).join("")}</select></label><small>Your own choice too.</small></p>
           <p class="hair-pick"><label>Eye colour <select id="eye"><option value="">As the portraits draw them</option>${[["dark-brown", "Dark brown"], ["brown", "Brown"], ["hazel", "Hazel"], ["amber", "Amber"], ["green", "Green"], ["grey", "Grey"], ["blue", "Blue"], ["light-blue", "Light blue"]].map(([k, l]) => `<option value="${k}"${k === p.eyeColor ? " selected" : ""}>${l}</option>`).join("")}</select></label><small>Your own choice: the chart leaves colouring out.</small></p>
           <h3>Made from</h3><ul class="layers">
             <li><span class="g">✦</span><span><b>The whole chart</b>: the archangels of its elements with the zodiac, Shem and lunar angels and Lilly's faces (60%), and the planetary archangels (40%), part by part.</span></li>
@@ -92,6 +95,8 @@
       <section class="card"><h2>Part by part</h2>${FEATS.map(([k, l]) => `<h3>${l}</h3><div class="strip">${top(k === "hair" ? { [F.lead]: 1 } : F.regions[k]).map(([a, v]) => `<figure data-thumb="${a}"><span class="img"></span>${esc(name(a))}<small>${pct(v)}</small></figure>`).join("")}</div>`).join("")}</section>`;
     $("#hair").addEventListener("change", (e) => { p.hairLead = e.target.value || null; save(); render(); });
     $("#eye").addEventListener("change", (e) => { p.eyeColor = e.target.value || null; save(); render(); });
+    $("#hairtint").addEventListener("change", (e) => { p.hairTint = e.target.value || null; save(); render(); });
+    $("#skin").addEventListener("change", (e) => { p.skinTone = e.target.value || null; save(); render(); });
     $("#hair-color")?.addEventListener("change", (e) => { p.hairKeepColor = e.target.checked; save(); render(); });
     const fig = $("#face"), cv = fig.querySelector("canvas");
     BlendFace.render(cv, F.spec, p.sex).then(() => fig.querySelector(".wait").remove()).catch((e) => { console.error(e); fig.querySelector(".wait").textContent = "The face could not be drawn."; });
@@ -238,7 +243,7 @@
     const err = $("#pf-err"), name = form.name.value.trim(), date = form.date.value, time = (form.time.value || "").replace(/^(\d\d:\d\d):00$/, "$1");
     if (!name || !date || !time) { err.textContent = "Name, date and exact time of birth are needed."; return; }
     if (!place) { err.textContent = "Pick the place of birth from the list, so the time zone is right."; return; }
-    const p = { id: editing?.id || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())), name, date, time, place, sex: form.sex.value, hairLead: editing?.hairLead || null, hairKeepColor: editing?.hairKeepColor ?? true, eyeColor: editing?.eyeColor || null };
+    const p = { id: editing?.id || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())), name, date, time, place, sex: form.sex.value, hairLead: editing?.hairLead || null, hairKeepColor: editing?.hairKeepColor ?? true, eyeColor: editing?.eyeColor || null, hairTint: editing?.hairTint || null, skinTone: editing?.skinTone || null };
     if (editing) data.people = data.people.map((q) => (q.id === p.id ? p : q)); else data.people.push(p);
     data.active = p.id; save(); dlg.close(); tab = "face"; render();
   });

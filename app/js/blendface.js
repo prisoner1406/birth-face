@@ -23,6 +23,49 @@ const BlendFace = (() => {
   // face are found around the two eye points and given this colour, keeping each pixel's own light and shade.
   const EYE_COLORS = { "dark-brown": [62, 40, 28], brown: [104, 66, 38], hazel: [122, 98, 52], amber: [168, 118, 44], green: [74, 118, 70],
     grey: [118, 128, 134], blue: [66, 106, 158], "light-blue": [118, 160, 204] };
+  // Hair colour, chosen by the person too: a wash laid over the engraved hair, its ink strands kept (the darkest
+  // strokes take the colour's shadow, the light between them its highlight).
+  const HAIR_COLORS = { black: [34, 28, 26], "dark-brown": [70, 46, 30], brown: [108, 72, 44], "light-brown": [150, 110, 70],
+    auburn: [140, 62, 34], red: [178, 86, 42], "dark-blonde": [176, 140, 86], blonde: [214, 182, 116], platinum: [232, 222, 194],
+    grey: [150, 148, 146], white: [228, 226, 222] };
+  // hairAt(x, y): how much the point of the finished face lies in the hair (outside the face, not the neck).
+  function hairMaskOf(o, W, H, hairAt) {
+    const N = W * H, Y1 = new Float32Array(N), Y2 = new Float32Array(N);
+    for (let p = 0, t = 0; p < N; p++, t += 4) { const v = o[t + 3] ? 0.299 * o[t] + 0.587 * o[t + 1] + 0.114 * o[t + 2] : 0; Y1[p] = v; Y2[p] = v * v; }
+    const blur = (a, sg) => { const rad = Math.ceil(sg * 3), ker = []; let ks = 0; for (let k = -rad; k <= rad; k++) { const v = Math.exp(-0.5 * (k / sg) ** 2); ker.push(v); ks += v; }
+      const t1 = new Float32Array(N), t2 = new Float32Array(N);
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { let v = 0; for (let k = -rad; k <= rad; k++) v += ker[k + rad] * a[y * W + Math.min(W - 1, Math.max(0, x + k))]; t1[y * W + x] = v / ks; }
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { let v = 0; for (let k = -rad; k <= rad; k++) v += ker[k + rad] * t1[Math.min(H - 1, Math.max(0, y + k)) * W + x]; t2[y * W + x] = v / ks; }
+      return t2; };
+    // hair is where fine strands lie close together (strong local contrast, light hair too); the smooth skin of the
+    // ears and the plain background are not
+    const m1 = blur(Y1, 1.5), m2 = blur(Y2, 1.5), sd = new Float32Array(N);
+    for (let p = 0; p < N; p++) sd[p] = Math.sqrt(Math.max(0, m2[p] - m1[p] * m1[p]));
+    const tex = blur(sd, 3.5), m = new Float32Array(N);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const p = y * W + x; if (!o[p * 4 + 3]) continue; m[p] = hairAt(x, y) * Math.min(1, Math.max(0, (tex[p] - 6) / 8)); }
+    return blur(m, 2.5);
+  }
+  function tintHair(o, W, H, mb, rgb) {
+    const N = W * H, sh = rgb.map((c) => c * 0.3), hi = rgb.map((c) => c + (255 - c) * 0.3);
+    for (let p = 0, t = 0; p < N; p++, t += 4) {
+      const k = 0.95 * Math.min(1, mb[p] * 1.6); if (k < 0.01 || !o[t + 3]) continue;
+      const Y = 0.299 * o[t] + 0.587 * o[t + 1] + 0.114 * o[t + 2], s = Math.min(1, Math.max(0, (Y - 35) / 200));
+      for (let c = 0; c < 3; c++) o[t + c] += k * (sh[c] + s * (hi[c] - sh[c]) - o[t + c]);
+    }
+  }
+  // Skin tone, chosen by the person: the engraving's cream skin is brought to the tone by scaling each colour channel,
+  // so the ink lines, hatching and shading stay exactly as drawn (dark ink stays dark).
+  const SKIN_TONES = { fair: [240, 214, 192], light: [230, 196, 164], "light-olive": [214, 182, 140], medium: [198, 156, 116],
+    olive: [182, 148, 100], tan: [172, 124, 84], brown: [140, 96, 64], "dark-brown": [106, 72, 50], deep: [80, 54, 40] };
+  const CREAM = [246, 234, 204]; // the engraving's own skin
+  function tintSkin(o, W, H, skinAt, hair, rgb) {
+    const r = rgb.map((c, i) => c / CREAM[i]);
+    for (let y = 0, p = 0; y < H; y++) for (let x = 0; x < W; x++, p++) {
+      const t = p * 4; if (!o[t + 3]) continue;
+      const k = skinAt(x, y) * (1 - Math.min(1, hair ? hair[p] * 1.25 : 0)); if (k < 0.01) continue;
+      for (let c = 0; c < 3; c++) o[t + c] += k * (Math.min(255, o[t + c] * r[c]) - o[t + c]);
+    }
+  }
   const lum = (d, i) => 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
   // Each iris is found as the dark disc with light (the white of the eye) on both sides of it, searched around the
   // eye point for its centre and size; only that disc is coloured, and within it only the iris itself (not the
@@ -58,7 +101,8 @@ const BlendFace = (() => {
         if (!edge) continue;
         const Y = 0.299 * o[i] + 0.587 * o[i + 1] + 0.114 * o[i + 2];
         // the iris's own tones: darker than the white of the eye and the lid's skin, lighter than the pupil and ink
-        const tone = Math.min(1, Math.max(0, (white - 18 - Y) / 25)) * Math.min(1, Math.max(0, (Y - 28) / 30));
+        // (engraved irises are drawn light, only a little darker than the white, so the whole pale disc counts)
+        const tone = Math.min(1, Math.max(0, (white - 6 - Y) / 14)) * Math.min(1, Math.max(0, (Y - 28) / 30));
         const m = 0.75 * edge * tone; if (m < 0.01) continue;
         for (let c = 0; c < 3; c++) o[i + c] += m * (Math.min(255, rgb[c] * Y / Yc) - o[i + c]);
       }
@@ -166,7 +210,7 @@ const BlendFace = (() => {
     const mix = weights.sexMix;
     const sets = mix ? [["m", mix.m], ["f", mix.f]].filter(([, v]) => v > 0.001) : sex === "m" || sex === "f" ? [[sex, 1]] : [["m", 0.5], ["f", 0.5]];
     const outlineSex = mix ? (sets.some(([x]) => x === mix.outline) ? mix.outline : sets[0][0]) : sets.length > 1 ? "m" : sets[0][0];
-    const META = ["sexMix", "lead", "neutral", "hairColor", "eyeColor"], flat = Object.fromEntries(Object.entries(weights).filter(([k]) => !META.includes(k)));
+    const META = ["sexMix", "lead", "neutral", "hairColor", "eyeColor", "hairTint", "skinTone"], flat = Object.fromEntries(Object.entries(weights).filter(([k]) => !META.includes(k)));
     // A face blended from both sexes' portraits without parts (one angel on its own, or a simple mix): its hair and
     // outline come from one portrait of the outline's sex like every other face, or the two sexes' hair overlaps
     // (long hair showing faintly past short). Its features blend the two sexes as before.
@@ -550,10 +594,36 @@ const BlendFace = (() => {
       for (let x = 0; x < W; x++) {
         let [dx, dy] = flowAt(x, y), px = x - dx, py = y - dy;
         for (let it = 0; it < 3; it++) { [dx, dy] = flowAt(px, py); px = x - dx; py = y - dy; }
+        // A point drawn from beyond the picture's edge (a tall head whose hair the shape pushes past the top) has no
+        // drawing: it fades out over a few pixels instead of repeating the edge row into streaks.
+        const out0 = Math.max(0, -py, -px, px - (W - 1.001), py - (H - 1.001)), edgeFade = Math.max(0, 1 - out0 / 8);
         px = Math.min(W - 1.001, Math.max(0, px)); py = Math.min(H - 1.001, Math.max(0, py));
         const x0 = px | 0, y0 = py | 0, ax = px - x0, ay = py - y0, a = (y0 * W + x0) * 4, b = a + 4, c = a + W * 4, d = c + 4, t = (y * W + x) * 4;
         for (let ch = 0; ch < 4; ch++) o[t + ch] = C[a + ch] * (1 - ax) * (1 - ay) + C[b + ch] * ax * (1 - ay) + C[c + ch] * (1 - ax) * ay + C[d + ch] * ax * ay;
-        o[t + 3] *= fade;
+        o[t + 3] *= fade * edgeFade;
+      }
+    }
+    // The head's parts in the finished face, for the chart's faces and the colour choices: the hair (fine strands
+    // close together, outside the face itself and the neck) and the forehead between the hair and the face (in each
+    // column across the face, everything from the top of the hair down), which must never be taken for background.
+    const tone = weights.skinTone && SKIN_TONES[weights.skinTone], hc = weights.hairTint && HAIR_COLORS[weights.hairTint];
+    const clip = CH && BlendFace.SILHOUETTE !== false; // a chart's face: only the head itself is kept
+    const inMean = (x, y) => { const [fx, fy] = flowAt(x, y); return [(x - fx) * 540 / W, (y - fy) * 720 / H]; };
+    const neckAt = (x, y, lo, w) => Math.min(1, Math.max(0, (y / H - lo) / 0.05)) * Math.min(1, Math.max(0, (w - Math.abs(x / W - 0.5)) / 0.04));
+    let hair = null, fore = null;
+    if (tone || hc || clip) {
+      hair = hairMaskOf(o, W, H, (x, y) => {
+        const [qx, qy] = inMean(x, y), face = Math.exp(-0.5 * (((qx - 270) / 130) ** 2 + ((qy - 345) / 186) ** 2) ** 3);
+        return Math.min(1, Math.max(0, (0.4 - face) / 0.3)) * (1 - neckAt(x, y, 0.6, 0.27));
+      });
+      fore = new Float32Array(N);
+      const yEnd = Math.round(H * 0.5), yTop = Math.round(H * 0.45);
+      for (let x = 0; x < W; x++) {
+        const [qx] = inMean(x, Math.round(H * 0.3)), across = Math.min(1, Math.max(0, (150 - Math.abs(qx - 270)) / 25));
+        if (across <= 0) continue;
+        let y0 = -1; for (let y = 0; y < yTop; y++) if (hair[y * W + x] > 0.25) { y0 = y; break; }
+        if (y0 < 0) continue;
+        for (let y = y0; y < yEnd; y++) fore[y * W + x] = across;
       }
     }
     // Around the head, the chosen portrait's own parchment and halo give way to the app's halo beneath: what is close
@@ -585,8 +655,32 @@ const BlendFace = (() => {
         const p = y * W + x, t = p * 4; if (!o[t + 3]) continue;
         const [fx, fy] = flowAt(x, y), q = Math.min(H - 1, Math.max(0, Math.round(y - fy))) * W + Math.min(W - 1, Math.max(0, Math.round(x - fx)));
         const face = Math.min(1, Math.max(0, (inn[q] - 0.25) / 0.2)), neck = Math.min(1, Math.max(0, (y / H - 0.6) / 0.05)) * Math.min(1, Math.max(0, (0.2 - Math.abs(x / W - 0.5)) / 0.04));
-        const keep = Math.max(face, neck); // the robe is not parchment-coloured, so it stays by itself
+        const keep = Math.max(face, neck, fore ? fore[p] : 0); // the robe is not parchment-coloured, so it stays by itself
         o[t + 3] *= 1 - cl[p] * (1 - keep);
+      }
+    }
+    if (tone || hc || clip) {
+      // the skin: the face with its ears, the forehead up to the hair, and the neck; never the hair
+      if (tone) tintSkin(o, W, H, (x, y) => {
+        const [qx, qy] = inMean(x, y), face = Math.exp(-0.5 * (((qx - 270) / 172) ** 2 + ((qy - 340) / 245) ** 2) ** 3);
+        return Math.max(Math.min(1, face * 1.3), neckAt(x, y, 0.55, 0.27), fore[y * W + x]);
+      }, hair, tone);
+      if (hc) tintHair(o, W, H, hair, hc);
+      // The head alone: its face and ears, its forehead, its neck and its hair. Whatever else the portraits carry
+      // around the head (their own halo rings, panels, glows) is made see-through, so only the one halo shows.
+      if (clip) {
+        const hw = new Float32Array(N);
+        for (let p = 0; p < N; p++) hw[p] = Math.min(1, hair[p] * 3);
+        const rad = 8, ker = []; let ks = 0; for (let k = -rad; k <= rad; k++) { const v = Math.exp(-0.5 * (k / 3.5) ** 2); ker.push(v); ks += v; }
+        const t1 = new Float32Array(N), hb = new Float32Array(N);
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { let v = 0; for (let k = -rad; k <= rad; k++) v += ker[k + rad] * hw[y * W + Math.min(W - 1, Math.max(0, x + k))]; t1[y * W + x] = v / ks; }
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { let v = 0; for (let k = -rad; k <= rad; k++) v += ker[k + rad] * t1[Math.min(H - 1, Math.max(0, y + k)) * W + x]; hb[y * W + x] = v / ks; }
+        for (let y = 0, p = 0; y < H; y++) for (let x = 0; x < W; x++, p++) {
+          const t = p * 4; if (!o[t + 3]) continue;
+          const [qx, qy] = inMean(x, y), face = Math.exp(-0.5 * (((qx - 270) / 152) ** 2 + ((qy - 335) / 232) ** 2) ** 3);
+          const keep = Math.max(Math.min(1, face * 1.3), neckAt(x, y, 0.55, 0.25), Math.min(1, hb[p] * 2.5), fore[p]);
+          o[t + 3] *= keep;
+        }
       }
     }
     if (weights.eyeColor && EYE_COLORS[weights.eyeColor]) tintEyes(o, W, H, [[160, 229], [281, 228]].map(([x, y]) => { const [dx, dy] = flowAt(x, y); return [x * W / 450 + dx, y * H / 600 + dy]; }), EYE_COLORS[weights.eyeColor]);
@@ -600,7 +694,7 @@ const BlendFace = (() => {
   // height), by the same part masks and hair rule the drawing uses. Returns [[key, share]], largest first.
   function who(weights, fx, fy, W = 450, H = 600) {
     const M = regionMasks(W, H), x = Math.max(0, Math.min(W - 1, Math.round(fx * W))), y = Math.max(0, Math.min(H - 1, Math.round(fy * H))), p = y * W + x;
-    const META = ["sexMix", "lead", "neutral", "hairColor", "eyeColor"];
+    const META = ["sexMix", "lead", "neutral", "hairColor", "eyeColor", "hairTint", "skinTone"];
     const regions = weights.regions ? Object.fromEntries(Object.entries(weights.regions).map(([k, v]) => [k, norm(v)])) : null;
     const out = {};
     if (!regions) { for (const [k, v] of Object.entries(norm(Object.fromEntries(Object.entries(weights).filter(([k]) => !META.includes(k)))))) out[layerOf(k)] = v; }
@@ -629,5 +723,5 @@ const BlendFace = (() => {
       return c.toDataURL("image/jpeg", 0.85);
     }));
   }
-  return { render, who, thumb, ANGEL, EYE_COLORS, ownSex: (key, sex) => !(BORROWED[sex] || []).includes(layerOf(key)), INNER: { cx: 270, cy: 352, rx: 155, ry: 225, k: 2.2 }, CARICATURE: { KT: 2.5, KS: 2.5, SIGMA: 8 }, DETAIL: { p: 6, pOut: 14, sigma: 8, sexP: 3, light: 0.3, lilly: 0.12, lillyTex: 0.03 }, HAIR: { sigma: 5, lo: 45, hi: 90 }, reset: () => (masks = null), DEBUG: null };
+  return { render, who, thumb, ANGEL, EYE_COLORS, HAIR_COLORS, SKIN_TONES, ownSex: (key, sex) => !(BORROWED[sex] || []).includes(layerOf(key)), INNER: { cx: 270, cy: 352, rx: 155, ry: 225, k: 2.2 }, CARICATURE: { KT: 2.5, KS: 2.5, SIGMA: 8 }, DETAIL: { p: 6, pOut: 14, sigma: 22, sexP: 3, light: 0.3, lilly: 0.12, lillyTex: 0.03 }, HAIR: { sigma: 5, lo: 45, hi: 90 }, reset: () => (masks = null), DEBUG: null };
 })();
