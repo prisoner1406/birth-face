@@ -238,7 +238,7 @@ Last, only the head itself is kept: the face and ears, the forehead up to the ha
 
 ### A finding about shape
 
-Blending a hundred faces evens shape out: in the example chart, the face's shape differs from the average chart's by only about a quarter of a pixel on average (at most a little over one pixel). Most of what makes a face its own is in the drawing (the lids, lips, brows and lines), not the outline.
+Blending a hundred faces evens shape out: in the example chart, the face's shape differs from the average chart's by only about a third of a pixel on average (at most under two pixels). Most of what makes a face its own is in the drawing (the lids, lips, brows and lines), not the outline.
 
 ![The shape grids](docs/deep-shape.jpg)
 
