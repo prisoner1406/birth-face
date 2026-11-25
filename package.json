@@ -1,0 +1,30 @@
+{
+  "name": "birth-face",
+  "version": "1.10.3",
+  "description": "Birth Face: the face read from the sky rising at your birth",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node build/test-rising.js",
+    "dist": "electron-builder --win nsis --x64",
+    "dist:store": "electron-builder --win appx --x64"
+  },
+  "author": "Birth Face",
+  "license": "ISC",
+  "devDependencies": {
+    "astronomy-engine": "^2.1.19",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8"
+  },
+  "productName": "Birth Face",
+  "build": {
+    "appId": "com.birthface.app",
+    "productName": "Birth Face",
+    "copyright": "Birth Face",
+    "directories": { "output": "dist/installer", "buildResources": "build" },
+    "files": ["main.js", "app/**/*", "package.json"],
+    "win": { "icon": "build/icon.ico" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "shortcutName": "Birth Face" },
+    "appx": { "displayName": "Birth Face", "identityName": "BirthFace.Placeholder", "publisher": "CN=Placeholder", "publisherDisplayName": "Birth Face", "applicationId": "BirthFace", "backgroundColor": "#1f2547" }
+  }
+}
