@@ -29,7 +29,7 @@ const BlendFace = (() => {
     auburn: [140, 62, 34], red: [178, 86, 42], "dark-blonde": [176, 140, 86], blonde: [214, 182, 116], platinum: [232, 222, 194],
     grey: [150, 148, 146], white: [228, 226, 222] };
   // hairAt(x, y): how much the point of the finished face lies in the hair (outside the face, not the neck).
-  function hairMaskOf(o, W, H, hairAt) {
+  function hairMaskOf(o, W, H, hairAt, fillAt) {
     const N = W * H, Y1 = new Float32Array(N), Y2 = new Float32Array(N);
     for (let p = 0, t = 0; p < N; p++, t += 4) { const v = o[t + 3] ? 0.299 * o[t] + 0.587 * o[t + 1] + 0.114 * o[t + 2] : 0; Y1[p] = v; Y2[p] = v * v; }
     const blur = (a, sg) => { const rad = Math.ceil(sg * 3), ker = []; let ks = 0; for (let k = -rad; k <= rad; k++) { const v = Math.exp(-0.5 * (k / sg) ** 2); ker.push(v); ks += v; }
@@ -41,20 +41,41 @@ const BlendFace = (() => {
     // ears and the plain background are not
     const m1 = blur(Y1, 1.5), m2 = blur(Y2, 1.5), sd = new Float32Array(N);
     for (let p = 0; p < N; p++) sd[p] = Math.sqrt(Math.max(0, m2[p] - m1[p] * m1[p]));
-    const tex = blur(sd, 3.5), m = new Float32Array(N);
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const p = y * W + x; if (!o[p * 4 + 3]) continue; m[p] = hairAt(x, y) * Math.min(1, Math.max(0, (tex[p] - 6) / 8)); }
-    return blur(m, 2.5);
+    const tex = blur(sd, 3.5), m = new Float32Array(N), hA = new Float32Array(N);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const p = y * W + x; if (!o[p * 4 + 3]) continue; hA[p] = hairAt(x, y); m[p] = hA[p] * Math.min(1, Math.max(0, (tex[p] - 6) / 8)); }
+    // Only the hair that grows from the head: what is joined to the crown. Textured marks the portraits leave around
+    // the head (bits of halo rings, panel edges, stray strokes) are not hair, though they pass the strand test.
+    const sc = W / 450, bin = new Float32Array(N);
+    for (let p = 0; p < N; p++) bin[p] = m[p] > 0.3 ? 1 : 0;
+    const dil = blur(bin, 3 * sc), reach = new Uint8Array(N), q = new Int32Array(N); let qh = 0, qt = 0;
+    for (let y = Math.round(0.03 * H); y < Math.round(0.24 * H); y++) for (let x = Math.round(0.36 * W); x < Math.round(0.64 * W); x++) {
+      const p = y * W + x; if (dil[p] > 0.12 && !reach[p]) { reach[p] = 1; q[qt++] = p; } }
+    while (qh < qt) {
+      const p = q[qh++], x = p % W, y = (p - x) / W;
+      for (const n of [x > 0 ? p - 1 : -1, x < W - 1 ? p + 1 : -1, y > 0 ? p - W : -1, y < H - 1 ? p + W : -1])
+        if (n >= 0 && !reach[n] && dil[n] > 0.12) { reach[n] = 1; q[qt++] = n; }
+    }
+    if (qt < 50) return blur(m, 2.5); // no hair at the crown (a bald or unusual portrait): as before
+    // the hair as one mass: small gaps inside it (a smooth highlight, the space between curls) are filled
+    const R = new Float32Array(N); for (let p = 0; p < N; p++) R[p] = reach[p];
+    const grown = blur(R, 6 * sc), closed = new Float32Array(N);
+    for (let p = 0; p < N; p++) closed[p] = grown[p] > 0.5 ? 1 : 0;
+    const shrunk = blur(closed, 4 * sc), out = new Float32Array(N);
+    // (the filling stops at the ears and below the jaw: there smooth skin and shoulders lie beside the hair, and only
+    // real strands count)
+    for (let y = 0, p = 0; y < H; y++) for (let x = 0; x < W; x++, p++)
+      out[p] = hA[p] * Math.max(m[p] * R[p], Math.min(1, Math.max(0, (shrunk[p] - 0.55) / 0.3)) * (fillAt ? fillAt(x, y) : 1));
+    return blur(out, 2.5);
   }
   function tintHair(o, W, H, mb, rgb) {
     // The highlight between strands is only as light as the colour allows: black hair shines dark grey, not pale;
     // blonde and white hair keep their light. The strands themselves take the colour's deep shadow.
     const N = W * H, Yh = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255, lift = 0.08 + 0.32 * Yh;
     const sh = rgb.map((c) => c * 0.28), hi = rgb.map((c) => c + (255 - c) * lift);
-    // the mask reaches out to the hair's very edge (the strands' own light rim and the glow drawn around them), so no
-    // pale outline is left between the coloured hair and the background
-    const edge = gblur(Float32Array.from(mb, (v) => Math.min(1, v * 3)), W, H, 3 * W / 450);
+    // (the hair's own pale rim and the glow drawn around it are cut away with the head's silhouette, so the colour
+    // stops at the hair itself and never spreads as a dark haze onto the background)
     for (let p = 0, t = 0; p < N; p++, t += 4) {
-      const k = 0.97 * Math.min(1, Math.max(mb[p] * 1.8, edge[p] * 1.6)); if (k < 0.01 || !o[t + 3]) continue;
+      const k = 0.97 * Math.min(1, mb[p] * 1.8); if (k < 0.01 || !o[t + 3]) continue;
       const Y = 0.299 * o[t] + 0.587 * o[t + 1] + 0.114 * o[t + 2], s = Math.min(1, Math.max(0, (Y - 35) / 200)) ** 1.15;
       for (let c = 0; c < 3; c++) o[t + c] += k * (sh[c] + s * (hi[c] - sh[c]) - o[t + c]);
     }
@@ -656,7 +677,7 @@ const BlendFace = (() => {
       hair = hairMaskOf(o, W, H, (x, y) => {
         const [qx, qy] = inMean(x, y), face = Math.exp(-0.5 * (((qx - 270) / 130) ** 2 + ((qy - 345) / 186) ** 2) ** 3);
         return Math.min(1, Math.max(0, (0.4 - face) / 0.3)) * (1 - neckAt(x, y, 0.6, 0.27));
-      });
+      }, (x, y) => (1 - earAt(x, y)) * Math.min(1, Math.max(0, (0.68 - y / H) / 0.05)));
       fore = new Float32Array(N);
       const yEnd = Math.round(H * 0.5), yTop = Math.round(H * 0.45);
       for (let x = 0; x < W; x++) {
@@ -726,7 +747,8 @@ const BlendFace = (() => {
         for (let y = 0, p = 0; y < H; y++) for (let x = 0; x < W; x++, p++) {
           const t = p * 4; if (!o[t + 3]) continue;
           const [qx, qy] = inMean(x, y), face = Math.exp(-0.5 * (((qx - 270) / 152) ** 2 + ((qy - 335) / 232) ** 2) ** 3);
-          const keep = Math.max(Math.min(1, face * 1.3), neckAt(x, y, 0.55, 0.25), Math.min(1, hb[p] * 2.5), fore[p], earAt(x, y) * ear[p]);
+          const hk = hc ? Math.min(1, Math.max(0, (hair[p] - 0.15) / 0.25)) : Math.min(1, hb[p] * 2.5); // coloured hair: its own edge, no pale rim
+          const keep = Math.max(Math.min(1, face * 1.3), neckAt(x, y, 0.55, 0.25), hk, fore[p], earAt(x, y) * ear[p]);
           o[t + 3] *= keep;
         }
       }
