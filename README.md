@@ -46,27 +46,71 @@ Every angel is drawn twice, as a man and as a woman. A face blends the two by th
 
 ---
 
-## Clean blending
+## How it works, step by step
 
-Faces are blended as in composite-face research: every portrait is set on one shared face by its irises, its shape and its drawing are blended separately, and the result is warped to the blended shape. So eyes, lips and jaw line up and nothing doubles or ghosts.
+```mermaid
+flowchart LR
+    A["Birth date, exact time, place"] --> B["The chart<br/>planets, signs, rising degree,<br/>Moon's mansion"]
+    B --> C["Each part of the face<br/>read from its own places<br/>(rising sign → frame, Moon → eyes, Venus → nose…)"]
+    C --> D["A share for every portrait<br/>in every part of the face"]
+    E["408 hand-drawn portraits<br/>set on one shared frame"] --> F["Blend the shapes<br/>(grids)"]
+    E --> G["Blend the drawings<br/>(in the shared shape)"]
+    D --> F
+    D --> G
+    F --> H["Warp the blended drawing<br/>to the blended shape"]
+    G --> H
+    H --> I["The face"]
+```
 
-- **Choose the hair:** any portrait's hair can be chosen, and only the hair changes. The face, brows, jaw and neck stay the chart's.
+The method is the one composite-face research uses (Galton's composite portraits, and the shape-and-texture averaging of modern face studies): shape and drawing are blended separately, so the blend has the averaged shape of its angels and still clean, single lines.
+
+### 1. One shared frame
+
+Every portrait was drawn by hand, so each sits a little differently in its picture. Before any blending, the build finds both irises in every portrait, by matching the eyes of the mean face at many sizes, and sets each portrait on one shared frame by them. Then every face's eyes, nose and mouth sit on the same pixels.
+
+![Finding the irises and setting every portrait on one frame](docs/how-alignment.jpg)
+
+### 2. Each face's own shape
+
+What still differs, once the eyes line up, is the face's own shape: a longer face, a broader jaw, a lower brow. The build measures it point by point (dense optical flow against the mean face) and stores it as a grid for every portrait. Here are four archangels' grids, one of each element, drawn three times stronger than they are:
+
+![Each portrait's shape as a bent grid](docs/how-shape.jpg)
+
+### 3. Blending
+
+For a chart, every portrait gets a share in every part of the face. The grids are blended by those shares into one shape, the drawings are blended inside the shared frame, and the blended drawing is warped to the blended shape. The fine ink lines come from the strongest portraits at each point, so lines never double; the face's distinctive lean (its difference from an average chart's face) is strengthened a little, so blending many faces does not flatten it.
+
+### 4. Who sits inside
+
+The **Face** tab shows the face and, part by part, the portraits it is made of and their shares. Point at any spot to see who sits there.
+
+![The Face tab for an example person](docs/app-face.jpg)
+
+*The Face tab, for a made-up example person.*
+
+### 5. The rising degree
+
+The **Rising degree** tab lists every ancient layer of the exact birth minute and what each gives the face.
+
+![The Rising degree tab](docs/app-rising.jpg)
+
+### 6. Testing against a real face
+
+The **Describe yourself** tab takes a description in words (never a photo), finds which planets and elements the tradition ties to each answer, and compares the chart's fit with 300 other birth moments at the same place. **Observations & discovery** then collects described faces across many people.
+
+![The Describe yourself tab](docs/app-describe.jpg)
+
+*A made-up example person with a made-up description, to show how the comparison reads.*
+
+### Your choices
+
+- **The hair:** any portrait's hair can be chosen, and only the hair changes. The face, brows, jaw and neck stay the chart's.
 
 ![The same face with five different hairs](docs/hair-only.jpg)
 
 *The same chart's face with the hair of Gabriel, Michael, Uriel, Cassiel and Raphael.*
 
-- **Choose the eye colour:** the chart and the tradition leave colouring out (skin, hair and eye colour come from family, not the sky), so eye colour is your own choice.
-- **See who sits inside:** point at any spot (the forehead, an eye, the lips) to see which angels make it, and in what share.
-
----
-
-## Four tabs
-
-1. **Face:** the face, who sits inside it, and each part of the face with its strongest portraits.
-2. **The rising degree:** every ancient layer of the exact birth minute, and what each gives the face.
-3. **Describe yourself:** describe a real face and build in words (never a photo), and see how well the chart explains it, compared with hundreds of other birth moments at the same place.
-4. **Observations & discovery:** with several people described, which parts of the chart keep matching the faces they describe.
+- **The eye colour:** the chart and the tradition leave colouring out (skin, hair and eye colour come from family, not the sky), so eye colour is your own choice.
 
 ---
 
