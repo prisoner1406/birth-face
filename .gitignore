@@ -1,0 +1,7 @@
+# Recreated by `npm install`
+node_modules/
+# Built installers (attach them to a GitHub Release instead: GitHub refuses files over 100 MB)
+dist/
+*.exe
+*.blockmap
+*.appx
