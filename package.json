@@ -1,6 +1,6 @@
 {
   "name": "birth-face",
-  "version": "1.13.2",
+  "version": "1.14.0",
   "description": "Birth Face: the face read from the sky rising at your birth",
   "main": "main.js",
   "scripts": {
